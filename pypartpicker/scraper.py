@@ -69,7 +69,7 @@ class Scraper:
         headers_dict = kwargs.get(
             "headers",
             {
-                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.150 Safari/537.36 Edg/88.0.705.63"
+                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
             },
         )
         if not isinstance(headers_dict, dict):
@@ -93,6 +93,7 @@ class Scraper:
         # gets the HTML code for the website and parses it using Python's built in HTML parser
         soup = BeautifulSoup(page.content, "html.parser")
         if "Verification" in soup.find(class_="pageTitle").get_text():
+            print(f"🤡🤡🤡🤡🤡🤡🤡You are being rate limited by PCPartPicker! Slow down your rate of requests, and complete the captcha at this URL: {url}")
             raise Verification(
                 f"You are being rate limited by PCPartPicker! Slow down your rate of requests, and complete the captcha at this URL: {url}"
             )
@@ -306,15 +307,17 @@ class Scraper:
                 parts.append(part_object)
 
         # returns the part objects
-        return parts[: kwargs.get("limit", 20)]
+        return parts[: kwargs.get("limit", 50000000)]
 
     def fetch_product(self, part_url) -> Product:
         # Ensure a valid product page was passed to the function
+        print(f"🔥🔥🔥 {part_url}")
         if self.__check_product_url(part_url) is None:
             raise ValueError("Invalid product URL!")
 
         try:
             soup = self.__make_soup(part_url)
+            # print(soup)
         except requests.exceptions.ConnectionError:
             raise ValueError("Invalid product URL! Max retries exceeded with URL.")
 
@@ -343,9 +346,11 @@ class Scraper:
                 url="https://"
                 + urlparse(part_url).netloc
                 + row.find(class_="td__finalPrice").find("a")["href"],
-                in_stock=True
-                if "In stock" in row.find(class_="td__availability").get_text()
-                else False,
+                in_stock=(
+                    True
+                    if "In stock" in row.find(class_="td__availability").get_text()
+                    else False
+                ),
             )
             # chceks if its the cheapest in stock price
             if (
@@ -435,18 +440,11 @@ class Scraper:
 
         # creates the product object to return
         product_object = Product(
-            name=soup.find(class_="pageTitle").get_text(),
             url=part_url,
             image=None,
             specs=specs,
             price_list=prices,
             price=price,
-            rating=soup.find(class_="actionBox-2023 actionBox__ratings")
-            .find(class_="product--rating list-unstyled")
-            .get_text()
-            .strip("\n")
-            .strip()
-            .strip("()"),
             reviews=reviews,
             compatible_parts=compatible_parts,
             type=soup.find(class_="breadcrumb")
@@ -461,6 +459,21 @@ class Scraper:
             # adds image to object if it finds one
             product_object.image = image_box.find("img")["src"].replace(
                 "https://https://", "https://"
+            )
+
+        rating_box = soup.find(
+            class_="actionBox-2023 actionBox__ratings"
+        ) and soup.find(class_="actionBox-2023 actionBox__ratings").find(
+            class_="product--rating list-unstyled"
+        )
+
+        name_box=soup.find(class_="pageTitle")
+        if name_box is not None:
+            product_object.name=name_box.get_text()
+
+        if rating_box is not None:
+            product_object.rating = (
+                rating_box.get_text().strip("\n").strip().strip("()"),
             )
 
         return product_object
