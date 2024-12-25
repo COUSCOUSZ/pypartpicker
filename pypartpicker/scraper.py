@@ -2,6 +2,7 @@ import asyncio
 import concurrent.futures
 import math
 import re
+from time import sleep
 from typing import List
 import requests
 from pypartpicker.regex import LIST_REGEX, PRODUCT_REGEX
@@ -93,7 +94,9 @@ class Scraper:
         # gets the HTML code for the website and parses it using Python's built in HTML parser
         soup = BeautifulSoup(page.content, "html.parser")
         if "Verification" in soup.find(class_="pageTitle").get_text():
-            print(f"🤡🤡🤡🤡🤡🤡🤡You are being rate limited by PCPartPicker! Slow down your rate of requests, and complete the captcha at this URL: {url}")
+            print(
+                f"🤡🤡🤡🤡🤡🤡🤡You are being rate limited by PCPartPicker! Slow down your rate of requests, and complete the captcha at this URL: {url}"
+            )
             raise Verification(
                 f"You are being rate limited by PCPartPicker! Slow down your rate of requests, and complete the captcha at this URL: {url}"
             )
@@ -202,6 +205,22 @@ class Scraper:
             url=list_url,
             compatibility=compatibilitynotes,
         )
+
+    def fetch_products(self, products_url, **kwargs):
+        pages_limit = 3
+        parts = []
+
+        try:
+            # pagination seems rendered async
+            sleep(5)
+            soup = self.__make_soup(products_url)
+            # print(soup)
+        except:
+            raise ValueError(f"Soup Error")
+        
+        # searches for number of pages
+        pagination = soup.find(class_="productList")
+        print(pagination)
 
     def part_search(self, search_term, **kwargs) -> List[Part]:
         search_term = search_term.replace(" ", "+")
@@ -467,9 +486,9 @@ class Scraper:
             class_="product--rating list-unstyled"
         )
 
-        name_box=soup.find(class_="pageTitle")
+        name_box = soup.find(class_="pageTitle")
         if name_box is not None:
-            product_object.name=name_box.get_text()
+            product_object.name = name_box.get_text()
 
         if rating_box is not None:
             product_object.rating = (
